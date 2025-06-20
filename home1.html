@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Village Scene</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #87CEEB; /* Sky blue */
+        }
+        canvas {
+            width: 100vw;
+            height: 100vh;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="villageCanvas"></canvas>
+
+    <!-- Three.js and OrbitControls -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.134/examples/js/controls/OrbitControls.js"></script>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            try {
+                // Check WebGL support
+                const testCanvas = document.createElement('canvas');
+                if (!testCanvas.getContext('webgl') && !testCanvas.getContext('experimental-webgl')) {
+                    document.body.innerHTML = "<h1 style='color: white; text-align: center; margin-top: 50px;'>WebGL is not supported. Use a modern browser like Chrome or Firefox.</h1>";
+                    return;
+                }
+
+                // Scene setup
+                const canvas = document.getElementById("villageCanvas");
+                const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+                renderer.setSize(window.innerWidth, window.innerHeight);
+                renderer.shadowMap.enabled = true;
+                renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+                const scene = new THREE.Scene();
+                const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+                camera.position.set(15, 10, 20);
+                camera.lookAt(0, 0, 0);
+
+                // Lighting
+                const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+                scene.add(ambientLight);
+
+                const sunlight = new THREE.DirectionalLight(0xffffff, 1);
+                sunlight.position.set(10, 20, 10);
+                sunlight.castShadow = true;
+                sunlight.shadow.mapSize.width = 1024;
+                sunlight.shadow.mapSize.height = 1024;
+                sunlight.shadow.camera.near = 0.5;
+                sunlight.shadow.camera.far = 50;
+                sunlight.shadow.camera.left = -20;
+                sunlight.shadow.camera.right = 20;
+                sunlight.shadow.camera.top = 20;
+                sunlight.shadow.camera.bottom = -20;
+                scene.add(sunlight);
+
+                // Ground
+                const groundGeometry = new THREE.PlaneGeometry(40, 40);
+                const groundMaterial = new THREE.MeshStandardMaterial({ color: 0x228B22 }); // Green grass
+                const ground = new THREE.Mesh(groundGeometry, groundMaterial);
+                ground.rotation.x = -Math.PI / 2;
+                ground.receiveShadow = true;
+                scene.add(ground);
+
+                // House
+                function createHouse(x, z, scale = 1) {
+                    const house = new THREE.Group();
+
+                    // Walls
+                    const wallGeometry = new THREE.BoxGeometry(4 * scale, 3 * scale, 4 * scale);
+                    const wallMaterial = new THREE.MeshStandardMaterial({ color: 0x8B0000 }); // Red
+                    const walls = new THREE.Mesh(wallGeometry, wallMaterial);
+                    walls.position.y = 1.5 * scale;
+                    walls.castShadow = true;
+                    walls.receiveShadow = true;
+                    house.add(walls);
+
+                    // Roof
+                    const roofGeometry = new THREE.ConeGeometry(3 * scale, 2 * scale, 4);
+                    const roofMaterial = new THREE.MeshStandardMaterial({ color: 0x964B00 }); // Brown
+                    const roof = new THREE.Mesh(roofGeometry, roofMaterial);
+                    roof.position.y = 3.5 * scale;
+                    roof.rotation.y = Math.PI / 4;
+                    roof.castShadow = true;
+                    house.add(roof);
+
+                    house.position.set(x, 0, z);
+                    scene.add(house);
+                }
+
+                createHouse(0, 0);      // Center house
+                createHouse(8, 2, 0.8); // Smaller house
+                createHouse(-6, -4);    // Default size house
+
+                // Sun
+                const sunGeometry = new THREE.SphereGeometry(1.5, 32, 32);
+                const sunMaterial = new THREE.MeshBasicMaterial({ color: 0xFFFF00 }); // Yellow
+                const sun = new THREE.Mesh(sunGeometry, sunMaterial);
+                sun.position.set(10, 15, 10);
+                scene.add(sun);
+
+                // Trees
+                function createTree(x, z) {
+                    const trunkGeometry = new THREE.CylinderGeometry(0.2, 0.2, 2, 8);
+                    const trunkMaterial = new THREE.MeshStandardMaterial({ color: 0x8B4513 }); // Brown
+                    const trunk = new THREE.Mesh(trunkGeometry, trunkMaterial);
+                    trunk.position.set(x, 1, z);
+                    trunk.castShadow = true;
+                    scene.add(trunk);
+
+                    const leavesGeometry = new THREE.SphereGeometry(1.5, 8, 8);
+                    const leavesMaterial = new THREE.MeshStandardMaterial({ color: 0x228B22 }); // Green
+                    const leaves = new THREE.Mesh(leavesGeometry, leavesMaterial);
+                    leaves.position.set(x, 2.5, z);
+                    leaves.castShadow = true;
+                    scene.add(leaves);
+                }
+
+                createTree(5, 5);
+                createTree(-3, 6);
+                createTree(7, -2);
+
+                // River
+                const riverGeometry = new THREE.PlaneGeometry(10, 3);
+                const riverMaterial = new THREE.MeshStandardMaterial({ color: 0x1E90FF, side: THREE.DoubleSide });
+                const river = new THREE.Mesh(riverGeometry, riverMaterial);
+                river.rotation.x = -Math.PI / 2;
+                river.position.set(0, 0.01, 8);
+                scene.add(river);
+
+                // Orbit controls
+                const controls = new THREE.OrbitControls(camera, canvas);
+                controls.enableDamping = true;
+                controls.dampingFactor = 0.05;
+
+                // Resize handler
+                window.addEventListener('resize', () => {
+                    renderer.setSize(window.innerWidth, window.innerHeight);
+                    camera.aspect = window.innerWidth / window.innerHeight;
+                    camera.updateProjectionMatrix();
+                });
+
+                // Animation loop
+                let time = 0;
+                function animate() {
+                    requestAnimationFrame(animate);
+                    time += 0.02;
+
+                    // Simple sun pulse
+                    sun.scale.set(
+                        1 + Math.sin(time) * 0.05,
+                        1 + Math.sin(time) * 0.05,
+                        1 + Math.sin(time) * 0.05
+                    );
+
+                    renderer.render(scene, camera);
+                    controls.update();
+                }
+                animate();
+
+                console.log("3D Village Scene initialized successfully!");
+            } catch (error) {
+                console.error("Error initializing scene:", error);
+                document.body.innerHTML = "<h2 style='color: red; text-align: center; margin-top: 50px;'>Error loading scene. Check console (F12) for details.</h2>";
+            }
+        });
+    </script>
+</body>
+</html>
